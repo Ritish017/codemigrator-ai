@@ -1,0 +1,43 @@
+[project]
+name = "codemigrator-api"
+version = "0.1.0"
+description = "CodeMigrator AI backend - 100% Python, 100% Nemotron"
+authors = [{name = "Ritish Kurma", email = "kurmaritish017@gmail.com"}]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "openai>=1.54.0",
+    "langgraph>=0.2.40",
+    "loguru>=0.7.2",
+    "tenacity>=9.0.0",
+    "httpx>=0.27.0",
+    "sse-starlette>=2.1.3",
+    "aiosqlite>=0.20.0",
+    "python-multipart>=0.0.12",
+    "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.7.0",
+]
+parsers = [
+    "tree-sitter>=0.23.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "llm*", "agents*", "parsers*", "models*", "routes*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

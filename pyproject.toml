@@ -1,0 +1,19 @@
+[project]
+name = "codemigrator-ai"
+version = "0.1.0"
+description = "Multi-agent legacy code migration powered by NVIDIA Nemotron 3"
+authors = [{name = "Ritish Kurma", email = "kurmaritish017@gmail.com"}]
+readme = "README.md"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "PIE", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["apps/api/tests"]
