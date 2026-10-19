@@ -15,7 +15,7 @@
 You upload legacy code (COBOL, Fortran, PL/I…). Five specialist agents collaborate via
 LangGraph to migrate it to a modern target language with idiomatic architecture, tests,
 and a migration report. Heavy reasoning runs on **Nemotron 3 Super (120B, 1M ctx)**;
-high-throughput conversion runs on **Nemotron 3 Nano (30B)**.
+high-throughput conversion runs on **Nemotron 3.5 Lightning (30B-A3B, the Nano tier; replaces the retired Nemotron 3 Nano)**.
 
 **No other LLM provider is used.** This is a Nemotron-only project — the kind of demo
 NVIDIA engineers actually want to see.
