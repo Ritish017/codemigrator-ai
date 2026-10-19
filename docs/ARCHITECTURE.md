@@ -4,7 +4,7 @@
 
 A **5-agent LangGraph pipeline** that migrates legacy code (starting with COBOL → Python).
 Every agent runs on **NVIDIA Nemotron 3** via the NIM API. Heavy reasoning lives on
-**Nemotron 3 Super (120B, 1M ctx)**; high-throughput conversion lives on **Nemotron 3 Nano (30B)**.
+**Nemotron 3 Super (120B, 1M ctx)**; high-throughput conversion lives on **Nemotron 3.5 Lightning (30B-A3B, the Nano tier; replaces the retired Nemotron 3 Nano)**.
 
 ## High-level flow
 
