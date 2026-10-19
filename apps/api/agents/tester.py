@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from llm.nemotron import NemotronClient
 from llm.prompts import TESTER_CASES_SYSTEM, TESTER_STRATEGY_SYSTEM
 from models.outputs import MigrationPlan, MigrationResult, TestSuite
+from utils.codecheck import run_tests, missing_local_imports, module_name, sanitize_python, syntax_error, undefined_names
 
 
 class TestStrategy(BaseModel):
@@ -66,16 +67,55 @@ Design a test strategy that catches the highest-impact regressions first.
 Migrated code to test:
 {code_block}
 
+Migrated modules and their import paths (import ONLY these project modules):
+{chr(10).join(f"- {m.target_file} -> import as `{module_name(m.target_file)}`" for m in migrations)}
+
 Generate executable pytest test files. Each file must be valid Python that runs as-is.
 """
-    suite = await client.call(
-        prompt=cases_prompt,
-        tier="nano",
-        system=TESTER_CASES_SYSTEM,
-        response_model=TestSuite,
-        max_tokens=6000,
-        temperature=0.3,
-    )
+    known = {module_name(m.target_file) for m in migrations}
+    feedback = ""
+    best: tuple[TestSuite, int] | None = None
+    for attempt in range(3):
+        suite = await client.call(
+            prompt=cases_prompt + feedback,
+            tier="nano",
+            system=TESTER_CASES_SYSTEM,
+            response_model=TestSuite,
+            max_tokens=16000,
+            temperature=0.3,
+        )
+        problems = []
+        for tf in suite.test_files:
+            tf.code = sanitize_python(tf.code)
+            if err := syntax_error(tf.code):
+                problems.append(f"{tf.filename}: SyntaxError at {err}")
+            if missing := missing_local_imports(tf.code, known):
+                problems.append(f"{tf.filename}: imports non-existent modules {', '.join(missing)}")
+            if undef := undefined_names(tf.code):
+                problems.append(f"{tf.filename}: uses names never defined or imported: {', '.join(undef)} (import them from the migrated module that defines them)")
+        if not problems:
+            # Static checks pass: actually run the suite. Only collection errors
+            # (imports, undefined names) are fed back, never assertion failures.
+            run = run_tests(
+                {m.target_file: m.migrated_code for m in migrations},
+                {tf.filename.split("/")[-1]: tf.code for tf in suite.test_files},
+            )
+            suite.notes = (suite.notes + f"\nExecution check: {run['summary']}").strip()
+            logger.info("tester: execution check attempt {}: {}", attempt + 1, run["summary"])
+            if run["collection_errors"]:
+                problems = [f"test collection error: {e}" for e in run["collection_errors"]]
+            if best is None or run["passed"] > best[1]:
+                best = (suite, run["passed"])
+        if not problems:
+            break
+        logger.warning("tester: attempt {} invalid: {}", attempt + 1, problems)
+        feedback = (
+            "\n\nYour previous test files were rejected: " + "; ".join(problems)
+            + ". Fix these and return all test files again."
+        )
+
+    if best is not None:
+        suite = best[0]
 
     # Stitch in the strategy text from Super into the suite.
     suite.strategy = strategy.strategy
