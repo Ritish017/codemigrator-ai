@@ -55,3 +55,19 @@ def test_migration_result_confidence_bounded():
             migrated_code="",
             confidence=1.5,
         )
+
+
+def test_parse_structured_keeps_outer_object_with_nested_list():
+    """Regression: an object that starts at index 0 must not be cut at its first '['."""
+    from pydantic import BaseModel
+    from llm.nemotron import NemotronClient
+
+    class M(BaseModel):
+        n: int
+        items: list[str]
+
+    out = NemotronClient._parse_structured('{"n": 2, "items": ["a", "b"]}', M)
+    assert out.n == 2 and out.items == ["a", "b"]
+
+    out = NemotronClient._parse_structured('Here you go:\n{"n": 1, "items": ["x"]}', M)
+    assert out.n == 1

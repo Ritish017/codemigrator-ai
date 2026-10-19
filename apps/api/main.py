@@ -47,7 +47,7 @@ async def root() -> dict:
         "powered_by": "NVIDIA Nemotron 3 Super + Nano",
         "tier_routing": {
             "super": "nvidia/nemotron-3-super-120b-a12b",
-            "nano": "nvidia/nemotron-3-nano-30b-a3b",
+            "nano": "nvidia/nemotron-3.5-lightning-30b-a3b",
         },
         "endpoints": [
             "GET  /api/health",

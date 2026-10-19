@@ -14,6 +14,7 @@ from llm.nemotron import NemotronClient
 from llm.prompts import MIGRATOR_SYSTEM
 from models.outputs import FileToMigrate, MigrationPlan, MigrationResult
 from models.state import SourceFile
+from utils.codecheck import import_errors, missing_local_imports, module_name, sanitize_python, syntax_error, undefined_names
 
 
 def _find_source(files: list[SourceFile], path: str) -> SourceFile | None:
@@ -57,17 +58,41 @@ Source code:
 
 {f'Reference (already-migrated files for consistency):\\n{context_block}' if context_block else ''}
 
+Target modules in this migration (the ONLY project modules you may import):
+{chr(10).join("- " + module_name(f.target_file) for f in plan.file_migration_order)}
+
 Produce the migrated code for {file_spec.target_file}. Follow the architecture exactly.
 """
 
-    result = await client.call(
-        prompt=prompt,
-        tier="nano",
-        system=MIGRATOR_SYSTEM,
-        response_model=MigrationResult,
-        max_tokens=6000,
-        temperature=0.3,
-    )
+    known = {module_name(f.target_file) for f in plan.file_migration_order}
+    feedback = ""
+    result: MigrationResult | None = None
+    for attempt in range(2):
+        result = await client.call(
+            prompt=prompt + feedback,
+            tier="nano",
+            system=MIGRATOR_SYSTEM,
+            response_model=MigrationResult,
+            max_tokens=6000,
+            temperature=0.3,
+        )
+        result.migrated_code = sanitize_python(result.migrated_code)
+        problems = []
+        if err := syntax_error(result.migrated_code):
+            problems.append(f"SyntaxError at {err}")
+        if missing := missing_local_imports(result.migrated_code, known):
+            problems.append("imports modules that are not generated: " + ", ".join(missing))
+        if undef := undefined_names(result.migrated_code):
+            problems.append("uses names that are never defined or imported: " + ", ".join(undef))
+        if not problems:
+            return result
+        logger.warning("migrator: {} attempt {} invalid: {}", file_spec.target_file, attempt + 1, problems)
+        feedback = (
+            "\n\nYour previous output was rejected: " + "; ".join(problems)
+            + ". Fix this and return the full corrected file."
+        )
+    assert result is not None
+    result.warnings.append("Automatic validation still failed after retry: " + feedback.strip())
     return result
 
 
@@ -104,6 +129,33 @@ async def run(
                 logger.error("migrator: file failed: {}", r)
                 continue
             results.append(r)
+
+    # Import every generated module together; re-migrate any file that fails to import.
+    broken = import_errors({r.target_file: r.migrated_code for r in results})
+    if broken:
+        logger.warning("migrator: import check failed: {}", broken)
+        specs = {f.target_file: f for f in plan.file_migration_order}
+        for i, r in enumerate(results):
+            if r.target_file not in broken or r.target_file not in specs:
+                continue
+            spec = specs[r.target_file]
+            source = _find_source(source_files, spec.source_file)
+            if source is None:
+                continue
+            others = [o for o in results if o.target_file != r.target_file]
+            fixed_spec = spec.model_copy(update={
+                "migration_notes": spec.migration_notes
+                + f"\n\nA previous version failed to import with: {broken[r.target_file]}. "
+                "Import names only from the modules that actually define them (see reference files)."
+            })
+            try:
+                results[i] = await _migrate_one(client, fixed_spec, source, plan, others)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("migrator: retry failed for {}: {}", r.target_file, exc)
+        still = import_errors({r.target_file: r.migrated_code for r in results})
+        for r in results:
+            if r.target_file in still:
+                r.warnings.append(f"Module does not import cleanly: {still[r.target_file]}")
 
     logger.success("migrator.done success={}/{}", len(results), len(plan.file_migration_order))
     return results

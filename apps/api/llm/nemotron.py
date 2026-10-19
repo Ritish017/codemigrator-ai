@@ -29,7 +29,7 @@ NemotronTier = Literal["super", "nano"]
 
 MODEL_MAP: dict[NemotronTier, str] = {
     "super": "nvidia/nemotron-3-super-120b-a12b",
-    "nano": "nvidia/nemotron-3-nano-30b-a3b",
+    "nano": "nvidia/nemotron-3.5-lightning-30b-a3b",
 }
 
 # NVIDIA has not published per-token pricing for these specific NIM-hosted models,
@@ -53,7 +53,7 @@ class NemotronClient:
 
     Tier semantics:
         - "super" -> nvidia/nemotron-3-super-120b-a12b (deep reasoning, 1M ctx)
-        - "nano"  -> nvidia/nemotron-3-nano-30b-a3b (high-throughput conversion)
+        - "nano"  -> nvidia/nemotron-3.5-lightning-30b-a3b (high-throughput conversion)
     """
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None) -> None:
@@ -131,6 +131,17 @@ class NemotronClient:
                     max_tokens=max_tokens,
                     temperature=temperature,
                     top_p=top_p,
+                    # Nemotron reasoning models can spend the whole
+                    # token budget thinking, leaving `content` empty. The Nano tier is
+                    # for fast conversion, so turn reasoning off there.
+                    # Super reasoning is opt-in (NEMOTRON_SUPER_THINKING=1): on the free
+                    # NIM tier, long thinking passes hit the upstream deadline.
+                    extra_body={
+                        "chat_template_kwargs": {
+                            "enable_thinking": tier == "super"
+                            and os.environ.get("NEMOTRON_SUPER_THINKING", "0") == "1"
+                        }
+                    },
                 )
             except Exception as exc:  # noqa: BLE001 - re-raise as our own type for tenacity
                 raise NemotronCallError(f"NIM call failed (tier={tier}): {exc}") from exc
@@ -169,15 +180,16 @@ class NemotronClient:
                 cleaned = cleaned[:-3]
             cleaned = cleaned.strip()
         # Some models prepend a {"json": ...} wrapper; try to find first { or [.
-        for opener in ("{", "["):
-            idx = cleaned.find(opener)
-            if idx > 0:
-                cleaned = cleaned[idx:]
-                break
+        # Cut any preamble before the first JSON opener. Only look at the earliest
+        # opener: if the text already starts with "{", searching for "[" next would
+        # slice into a nested list and drop the outer object.
+        starts = [i for i in (cleaned.find("{"), cleaned.find("[")) if i >= 0]
+        if starts and min(starts) > 0:
+            cleaned = cleaned[min(starts):]
         try:
             return response_model.model_validate_json(cleaned)
         except Exception as exc:
-            logger.error("Failed to parse structured output: {}", cleaned[:500])
+            logger.error("Failed to parse structured output ({}): {} ... {}", str(exc).splitlines()[0:3], cleaned[:300].replace("\n"," "), cleaned[-200:].replace("\n"," "))
             raise NemotronCallError(
                 f"Could not parse {response_model.__name__} from Nemotron output"
             ) from exc

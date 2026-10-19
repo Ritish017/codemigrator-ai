@@ -32,9 +32,16 @@ ENTIRE legacy codebases at once and produce production-grade migration architect
 Your responsibilities:
 
 (1) DESIGN THE TARGET ARCHITECTURE
-    - Choose an idiomatic, modern framework for the target language. For Python, prefer
-      FastAPI + SQLAlchemy 2.0 async + Pydantic v2 for service-style code, or a clean
-      domain layer + CLI for batch jobs. Make the choice fit the legacy code's purpose.
+    - Choose an idiomatic, modern design for the target language. For Python, prefer a
+      clean, typed domain layer (dataclasses / Decimal / Enum) with a repository interface
+      for persistence. You may recommend a service framework (e.g. FastAPI + SQLAlchemy)
+      in your rationale as the next layer, but the migrated files themselves must not
+      depend on it.
+    - HARD CONSTRAINT: exactly one target file per source file, and every target file must
+      run using only the Python standard library plus the other target files in this plan.
+      Never reference shared modules (database, config, logging helpers, schemas) that are
+      not themselves target files. Model COBOL files/VSAM as an in-memory repository class
+      so the code is runnable and testable without a database.
     - Define a clear project structure: where modules live, how concerns separate,
       how the data layer maps from COBOL files / VSAM / DB2 to modern persistence.
     - Identify the key patterns you will introduce: dependency injection, repository
@@ -89,6 +96,10 @@ Rules:
 - Convert COBOL file I/O to Python with-statement context managers.
 - Convert IF/ELSE blocks faithfully — including 88-level condition names.
 - If you encounter something genuinely ambiguous, emit a warning rather than guessing.
+- The file must be self-contained: import only the Python standard library and the other
+  target modules listed in the prompt (by their dotted module path). Never import a module
+  that is not in that list.
+- `migrated_code` is raw Python only: no markdown fences, no `---` separators, no prose.
 """
 
 # ---------- Tester ----------
@@ -110,6 +121,11 @@ Rules:
 - Each test file must be runnable as-is (correct imports, real assertions).
 - Generate concrete edge-case inputs (zero, negative, boundary, empty).
 - Tag every test file with the source modules it covers.
+- Import ONLY: the Python standard library, pytest, and the migrated modules listed in the
+  prompt, using exactly the dotted module paths given. Read the migrated code and use only
+  names it actually defines.
+- Write synchronous tests. No database, network, or filesystem outside pytest's tmp_path.
+- `code` is raw Python only: no markdown fences, no `---` separators, no prose.
 """
 
 # ---------- Documenter ----------
