@@ -46,8 +46,8 @@ async def root() -> dict:
         "name": "CodeMigrator AI",
         "powered_by": "NVIDIA Nemotron 3 Super + Nano",
         "tier_routing": {
-            "super": "nvidia/nemotron-3-super-120b-a12b",
-            "nano": "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "super": settings.super_model,
+            "nano": settings.nano_model,
         },
         "endpoints": [
             "GET  /api/health",
