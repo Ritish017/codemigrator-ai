@@ -13,7 +13,7 @@ from typing import AsyncIterator
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from agents import architect, documenter, migrator, reader, tester
+from agents import architect, documenter, migrator, reader, tester, verifier
 from llm.nemotron import NemotronClient, get_client
 from models.outputs import MigrationReport
 from models.state import MigrationState, SourceFile
@@ -65,6 +65,11 @@ async def tester_node(state: MigrationState) -> MigrationState:
     state["progress_percent"] = 80.0
     suite = await tester.run(client, state["plan"], state["migrations"])
     state["tests"] = suite
+    if state.get("golden_dir"):
+        from utils.equivalence import load_golden
+
+        scenario, golden = load_golden(state["golden_dir"])
+        state["equivalence"] = await verifier.run(client, state["migrations"], scenario, golden)
     state["progress_percent"] = 90.0
     state["metrics"] = client.get_metrics()
     return state
@@ -122,7 +127,7 @@ def get_graph():
 # ---------- High-level helpers ----------
 
 async def run_migration(
-    source_files: list[SourceFile], target_language: str = "python"
+    source_files: list[SourceFile], target_language: str = "python", golden_dir: str | None = None
 ) -> MigrationState:
     """Run the full pipeline and return the final state."""
     initial: MigrationState = {
@@ -135,6 +140,7 @@ async def run_migration(
         "errors": [],
         "events": [],
         "migrations": [],
+        "golden_dir": golden_dir,
     }
     graph = get_graph()
     final_state = await graph.ainvoke(initial)
@@ -142,7 +148,7 @@ async def run_migration(
 
 
 async def stream_migration(
-    source_files: list[SourceFile], target_language: str = "python"
+    source_files: list[SourceFile], target_language: str = "python", golden_dir: str | None = None
 ) -> AsyncIterator[dict]:
     """Async iterator yielding state updates for SSE.
 
@@ -158,6 +164,7 @@ async def stream_migration(
         "errors": [],
         "events": [],
         "migrations": [],
+        "golden_dir": golden_dir,
     }
     graph = get_graph()
     try:
