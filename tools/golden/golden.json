@@ -1,0 +1,57 @@
+{
+  "generated_by": "tools/golden/run_golden.py (GnuCOBOL, original COBOL sources)",
+  "legacy_quirks": [
+    "TRANSACT and INTEREST build output lines with STRING into a buffer that is never cleared, so shorter lines carry trailing text from the previous line.",
+    "POST-TRANSFER debits the source account before checking the destination exists; a transfer to a missing account is counted as failed but the debit is kept.",
+    "TRANSACT originally did not compile under GnuCOBOL (STRING of a COMP-3 field); the sample now edits the amount through WS-DISPLAY-AMT first."
+  ],
+  "opening_balances": {
+    "101": "1000.00",
+    "102": "250.50",
+    "103": "0.00",
+    "104": "5000.00",
+    "105": "75.00"
+  },
+  "transact": {
+    "processed": 5,
+    "failed": 4,
+    "balances_after": {
+      "101": "0.00",
+      "102": "1150.75",
+      "103": "1234.56",
+      "104": "3765.44",
+      "105": "0.00"
+    },
+    "audit_lines": [
+      "DEPOSIT  0000000001 ACC=0000000102 AMT=          $100.25",
+      "WITHDRAW 0000000002 ACC=0000000101 AMT=          $200.00",
+      "TRANSFER 0000000004 FROM=0000000104 TO=0000000103 AMT=        $1,234.56",
+      "WITHDRAW 0000000008 ACC=0000000105 AMT=           $25.00      $1,234.56",
+      "TRANSFER 0000000009 FROM=0000000101 TO=0000000102 AMT=          $800.00"
+    ]
+  },
+  "interest": {
+    "credited": {
+      "101": "0.00",
+      "103": "56.71",
+      "104": "172.98"
+    },
+    "total_interest": "229.69",
+    "accounts_credited": 3,
+    "accounts_read": 5,
+    "balances_after": {
+      "101": "0.00",
+      "102": "1150.75",
+      "103": "1291.27",
+      "104": "3938.42",
+      "105": "0.00"
+    },
+    "report_lines": [
+      "ACC=0000000101 HOLDER=Alice Rao                                INTEREST=            $0.00",
+      "ACC=0000000103 HOLDER=Chen Li                                  INTEREST=           $56.71",
+      "ACC=0000000104 HOLDER=Devi Sharma                              INTEREST=          $172.98",
+      "TOTAL INTEREST CREDITED:               $229.69                 INTEREST=          $172.98",
+      "ACCOUNTS CREDITED: 0000003 / READ: 00000059.69                 INTEREST=          $172.98"
+    ]
+  }
+}
