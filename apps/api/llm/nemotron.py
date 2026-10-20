@@ -27,9 +27,13 @@ T = TypeVar("T", bound=BaseModel)
 
 NemotronTier = Literal["super", "nano"]
 
+from config import settings as _settings
+
+# Read from settings so SUPER_MODEL / NANO_MODEL in .env actually take effect
+# (previously hard-coded, which silently ignored the env overrides).
 MODEL_MAP: dict[NemotronTier, str] = {
-    "super": "nvidia/nemotron-3-super-120b-a12b",
-    "nano": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "super": _settings.super_model,
+    "nano": _settings.nano_model,
 }
 
 # NVIDIA has not published per-token pricing for these specific NIM-hosted models,
@@ -52,7 +56,7 @@ class NemotronClient:
     """NVIDIA Nemotron client using NIM API.
 
     Tier semantics:
-        - "super" -> nvidia/nemotron-3-super-120b-a12b (deep reasoning, 1M ctx)
+        - "super" -> nvidia/nemotron-3.5-super-vl-120b-a12b (deep reasoning, 1M ctx)
         - "nano"  -> nvidia/nemotron-3.5-lightning-30b-a3b (high-throughput conversion)
     """
 
