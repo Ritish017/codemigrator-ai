@@ -14,7 +14,8 @@ async def main():
     client = get_client(); client.reset_metrics()
     t0 = time.perf_counter(); last = t0
     stages, state = {}, {}
-    async for ch in stream_migration(files, "python"):
+    golden_dir = str(Path(__file__).resolve().parents[2] / "tools" / "golden")
+    async for ch in stream_migration(files, "python", golden_dir=golden_dir):
         now = time.perf_counter()
         if ch["node"] == "error":
             print("ERROR", ch["state"]); state["error"] = ch["state"]; break
@@ -55,6 +56,12 @@ async def main():
         for k in ("passed", "failed", "error", "errors"):
             mm = re.search(rf"(\d+) {k}\b", summary)
             if mm: res[f"tests_{k}"] = int(mm.group(1))
+    eq = state.get("equivalence")
+    if eq is not None:
+        res["equivalence"] = {"matched": eq.matched, "total": eq.total, "attempts": eq.attempts,
+                              "error": (eq.error or "")[:500] or None,
+                              "mismatches": [c for c in eq.checks if not c["match"]]}
+        (OUT / "equivalence_adapter.py").write_text(eq.adapter_code or "")
     if state.get("report") is not None:
         (OUT / "report.md").write_text(state["report"].markdown)
     (OUT / "results.json").write_text(json.dumps(res, indent=2, default=str))
