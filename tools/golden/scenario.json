@@ -1,0 +1,22 @@
+{
+  "description": "Fixed scenario for golden-file equivalence. Run the legacy COBOL on it, record the outputs, and require the migrated code to reproduce them.",
+  "accounts": [
+    {"number": 101, "holder": "Alice Rao",   "type": "SV", "deposit": "1000.00"},
+    {"number": 102, "holder": "Bob Mathew",  "type": "CK", "deposit": "250.50"},
+    {"number": 103, "holder": "Chen Li",     "type": "SV", "deposit": "0.00"},
+    {"number": 104, "holder": "Devi Sharma", "type": "SV", "deposit": "5000.00"},
+    {"number": 105, "holder": "Eshan Gupta", "type": "CK", "deposit": "75.00"}
+  ],
+  "transactions": [
+    {"id": 1, "type": "DP", "from": 0,   "to": 102, "amount": "100.25"},
+    {"id": 2, "type": "WD", "from": 101, "to": 0,   "amount": "200.00"},
+    {"id": 3, "type": "WD", "from": 102, "to": 0,   "amount": "999999.00"},
+    {"id": 4, "type": "TF", "from": 104, "to": 103, "amount": "1234.56"},
+    {"id": 5, "type": "DP", "from": 0,   "to": 999, "amount": "10.00"},
+    {"id": 6, "type": "XX", "from": 101, "to": 102, "amount": "1.00"},
+    {"id": 7, "type": "TF", "from": 105, "to": 999, "amount": "50.00"},
+    {"id": 8, "type": "WD", "from": 105, "to": 0,   "amount": "25.00"},
+    {"id": 9, "type": "TF", "from": 101, "to": 102, "amount": "800.00"}
+  ],
+  "interest": {"annual_rate": "0.0450", "periods_per_year": 12, "years": 1}
+}
