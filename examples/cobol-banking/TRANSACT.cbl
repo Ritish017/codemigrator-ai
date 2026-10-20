@@ -102,8 +102,9 @@
                ADD TR-AMOUNT TO ACC-BALANCE
                REWRITE ACCOUNT-RECORD
                ADD 1 TO WS-PROCESSED
+               MOVE TR-AMOUNT TO WS-DISPLAY-AMT
                STRING "DEPOSIT  " TR-TXN-ID " ACC=" TR-TO-ACCT
-                      " AMT=" TR-AMOUNT
+                      " AMT=" WS-DISPLAY-AMT
                       DELIMITED BY SIZE INTO WS-AUDIT-MSG
                WRITE AUDIT-LINE FROM WS-AUDIT-MSG
            ELSE
@@ -118,8 +119,9 @@
                    SUBTRACT TR-AMOUNT FROM ACC-BALANCE
                    REWRITE ACCOUNT-RECORD
                    ADD 1 TO WS-PROCESSED
+                   MOVE TR-AMOUNT TO WS-DISPLAY-AMT
                    STRING "WITHDRAW " TR-TXN-ID " ACC=" TR-FROM-ACCT
-                          " AMT=" TR-AMOUNT
+                          " AMT=" WS-DISPLAY-AMT
                           DELIMITED BY SIZE INTO WS-AUDIT-MSG
                    WRITE AUDIT-LINE FROM WS-AUDIT-MSG
                ELSE
@@ -141,10 +143,11 @@
                    ADD TR-AMOUNT TO ACC-BALANCE
                    REWRITE ACCOUNT-RECORD
                    ADD 1 TO WS-PROCESSED
+                   MOVE TR-AMOUNT TO WS-DISPLAY-AMT
                    STRING "TRANSFER " TR-TXN-ID
                           " FROM=" TR-FROM-ACCT
                           " TO="   TR-TO-ACCT
-                          " AMT="  TR-AMOUNT
+                          " AMT="  WS-DISPLAY-AMT
                           DELIMITED BY SIZE INTO WS-AUDIT-MSG
                    WRITE AUDIT-LINE FROM WS-AUDIT-MSG
                ELSE

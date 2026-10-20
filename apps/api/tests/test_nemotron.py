@@ -10,7 +10,7 @@ from llm.nemotron import MODEL_MAP, NemotronClient
 
 
 def test_model_map():
-    assert MODEL_MAP["super"] == "nvidia/nemotron-3-super-120b-a12b"
+    assert MODEL_MAP["super"] == "nvidia/nemotron-3.5-super-vl-120b-a12b"
     assert MODEL_MAP["nano"] == "nvidia/nemotron-3.5-lightning-30b-a3b"
 
 

@@ -5,6 +5,7 @@ from typing import Any, TypedDict
 
 from models.outputs import (
     CodebaseAnalysis,
+    EquivalenceReport,
     MigrationPlan,
     MigrationReport,
     MigrationResult,
@@ -29,6 +30,8 @@ class MigrationState(TypedDict, total=False):
     plan: MigrationPlan | None
     migrations: list[MigrationResult]
     tests: TestSuite | None
+    equivalence: EquivalenceReport | None
+    golden_dir: str | None
     report: MigrationReport | None
 
     # Streaming bookkeeping
