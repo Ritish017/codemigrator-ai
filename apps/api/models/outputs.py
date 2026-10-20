@@ -115,6 +115,17 @@ class TestSuite(BaseModel):
     notes: str = Field(default="")
 
 
+# ---------- Verifier (golden-file equivalence) ----------
+
+class EquivalenceReport(BaseModel):
+    adapter_code: str = ""
+    attempts: int = 0
+    checks: list[dict] = Field(default_factory=list)
+    matched: int = 0
+    total: int = 0
+    error: str | None = None
+
+
 # ---------- Documenter ----------
 
 class MigrationReport(BaseModel):
